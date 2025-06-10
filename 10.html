@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>青州云门山风景区-东夷文化标志园</title>
+    <!-- 引入资源 -->
+    <script type="text/javascript">
+        window._AMapSecurityConfig = {
+            securityJsCode: "e7c234f2ca3351f8604a4b3891af4a99",
+        };
+    </script>
+    <script type="text/javascript"
+        src="https://webapi.amap.com/maps?v=2.0&key=c9e043850be9570705de7c3bcd32b938&plugin=AMap.Walking"></script>
+    <!-- 设置地图样式 -->
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            background: linear-gradient(to bottom,
+                    #c3ebeb 0%,
+                    /* 顶部浅蓝 */
+                    #d0e6f0 30%,
+                    /* 过渡色 */
+                    #C8E6C9 70%,
+                    /* 中间浅绿 */
+                    #E8F5E9 100%);
+            /* 底部极浅绿 */
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+
+        /* 标题样式 */
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .main-title {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .sub-title {
+            font-size: 20px;
+            color: #000000;
+        }
+
+        /* 地图容器 */
+        #container {
+            width: calc(100% - 300px);
+            height: 83vh;
+            /* 调整地图高度 */
+            margin-left: 50px;
+            /* margin: 0 auto;  外边距，左右为0，上下居中。 */
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            border: 1px solid #e0e0e0;
+        }
+
+        /* 路线规划控制面板 */
+        .route-panel {
+            position: absolute;
+            top: 108px;
+            right: 60px;
+            width: 157px;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+
+        .route-panel h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+
+        .route-panel select, 
+        .route-panel button {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .route-panel button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .route-panel button:hover {
+            background-color: #45a049;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .main-title {
+                font-size: 22px;
+            }
+
+            .sub-title {
+                font-size: 16px;
+            }
+
+            #container {
+                height: 70vh;
+                width: calc(100% - 40px);
+            }
+            
+            .route-panel {
+                position: relative;
+                top: auto;
+                right: auto;
+                width: calc(100% - 30px);
+                margin: 10px auto;
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+    <!-- 添加标题 -->
+    <div class="header">
+        <div class="main-title">青州云门山风景区-东夷文化标志园</div>
+        <div class="sub-title">户外活动与休闲地图</div>
+    </div>
+
+    <!-- 路线规划控制面板 -->
+    <div class="route-panel">
+        <h3>步行路线规划</h3>
+        <select id="startPoint">
+            <option value="">选择起点</option>
+            <!-- 选项将通过JS动态添加 -->
+        </select>
+        <select id="endPoint">
+            <option value="">选择终点</option>
+            <!-- 选项将通过JS动态添加 -->
+        </select>
+        <button id="planRoute">规划路线</button>
+        <button id="clearRoute" style="background-color: #f44336;">清除路线</button>
+    </div>
+
+    <!-- 创建地图容器 -->
+    <div id="container"></div>
+    <!-- 加载地图 -->
+    <script>
+        var map = new AMap.Map("container", {
+            center: [118.4705, 36.6698],//地图中心经纬度
+            zoom: 17.5,//地图缩放比例
+            viewMode: "3D",
+            pitch: 10,
+        });
+
+        // 初始化步行导航插件
+        var walking = new AMap.Walking({
+            map: map,
+            panel: "panel" // 可选，可以指定一个div的id用于显示步行导航的文字方案
+        });
+
+        // 存储路线相关对象
+        var routeLine = null;
+        var startMarker = null;
+        var endMarker = null;
+
+        AMap.plugin(
+            [
+                "AMap.ToolBar",
+                "AMap.Scale",
+                "AMap.HawkEye",
+                "AMap.MapType",
+                "AMap.Geolocation",
+                "AMap.ControlBar",
+            ],
+            function () {
+                //添加工具条控件，工具条控件集成了缩放、平移、定位等功能按钮在内的组合控件
+                map.addControl(new AMap.ToolBar());
+
+                //添加比例尺控件，展示地图在当前层级和纬度下的比例尺
+                map.addControl(new AMap.Scale());
+
+                //添加鹰眼控件，在地图右下角显示地图的缩略图
+                map.addControl(new AMap.HawkEye({ isOpen: true }));
+
+                //添加类别切换控件，实现默认图层与卫星图、实施交通图层之间切换的控制
+                map.addControl(new AMap.MapType());
+
+                //添加定位控件，用来获取和展示用户主机所在的经纬度位置
+                map.addControl(new AMap.Geolocation());
+
+                //添加控制罗盘控件，用来控制地图的旋转和倾斜
+                map.addControl(new AMap.ControlBar());
+            }
+        );
+        
+        // 1. 定义固定坐标点
+        const points = [
+            { lng: 118.469512, lat: 36.671878, title: "出入口1", type: "基础功能类", imageUrl: "https://tse4-mm.cn.bing.net/th/id/OIP-C.mb8sYyHhQFUCZ91EfzkRSAHaBk?rs=1&pid=ImgDetMain" },
+            { lng: 118.474028, lat: 36.6701, title: "出入口2", type: "基础功能类", imageUrl: "https://ts1.tc.mm.bing.net/th/id/R-C.d57daf2b77d26821a9221a253d4746a6?rik=7KiQv1h%2bJXoI3Q&riu=http%3a%2f%2fn.sinaimg.cn%2fsinakd20250206s%2f76%2fw1554h922%2f20250206%2f5aa5-23d085422acd90591fef53caad211c56.png&ehk=pFnNGjHbDy413YsRsfEXBxQmiPbR9SuLWg6fA4Qg7%2bM%3d&risl=&pid=ImgRaw&r=0" },
+            { lng: 118.470725, lat: 36.668036, title: "出入口3", type: "基础功能类"},
+            { lng: 118.469132, lat: 36.66803, title: "出入口4", type: "基础功能类" },
+            { lng: 118.468185, lat: 36.668065, title: "出入口5", type: "基础功能类" },
+            { lng: 118.466534, lat: 36.670265, title: "出入口6", type: "基础功能类" },
+            { lng: 118.473381, lat: 36.669319, title: "第3停车场", type: "基础功能类" },
+            { lng: 118.467602, lat: 36.67123, title: "第6停车场", type: "基础功能类" },
+            { lng: 118.473203, lat: 36.669559, title: "卫生间1", type: "基础功能类" },
+            { lng: 118.467028, lat: 36.669524, title: "卫生间2", type: "基础功能类" },
+            { lng: 118.469964, lat: 36.671423, title: "111", type: "文化体验类" },
+            { lng: 118.469984, lat: 36.670699, title: "222", type: "文化体验类" },
+            { lng: 118.469949, lat: 36.670307, title: "333", type: "文化体验类" },
+            { lng: 118.469949, lat: 36.669254, title: "444", type: "文化体验类" },
+            { lng: 118.467296, lat: 36.670031, title: "555", type: "文化体验类" },
+            { lng: 118.472569, lat: 36.670571, title: "666", type: "文化体验类" }
+        ];
+
+        // 2. 定义图标
+        const icons = {
+            "基础功能类": "https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png",
+            "文化体验类": "https://webapi.amap.com/theme/v1.3/markers/n/mark_r.png",
+        };
+
+        // 3. 存储标记
+        let markers = [];
+
+        // 4. 创建标记并绑定点击事件
+        function createMarkers() {
+            // 先清除旧标记
+            if (markers.length > 0) {
+                map.remove(markers);
+                markers = [];
+            }
+
+            // 创建新标记
+            markers = points.map(point => {
+                const marker = new AMap.Marker({
+                    position: [point.lng, point.lat],
+                    title: point.title,
+                    label: {
+                        content: point.title,
+                        offset: new AMap.Pixel(10, -5)
+                    },
+                    icon: icons[point.type],
+                    extData: point // 存储完整数据（包括图片URL）
+                });
+
+                // 绑定点击事件：显示图片
+                marker.on('click', function (e) {
+                    showImageWindow(e.target);
+                });
+
+                return marker;
+            });
+
+            // 添加到地图
+            map.add(markers);
+            
+            // 填充路线规划的下拉选项
+            fillRouteOptions();
+        }
+
+        // 5. 显示图片的信息窗口
+        function showImageWindow(marker) {
+            const point = marker.getExtData(); // 获取关联的数据
+            const content = `
+                <div style="padding: 5px;">
+                    <h4>${point.title}</h4>
+                    ${point.imageUrl ? `<img src="${point.imageUrl}" style="width: 200px; height: auto;"/>` : ''}
+                </div>
+            `;
+
+            // 创建信息窗口（如果已存在则更新内容）
+            if (!window.infoWindow) {
+                window.infoWindow = new AMap.InfoWindow({
+                    offset: new AMap.Pixel(0, -30), // 窗口位置偏移
+                    autoMove: true // 自动调整地图视野
+                });
+            }
+
+            window.infoWindow.setContent(content);
+            window.infoWindow.open(map, marker.getPosition());
+        }
+        
+        // 6. 填充路线规划的下拉选项
+        function fillRouteOptions() {
+            const startSelect = document.getElementById('startPoint');
+            const endSelect = document.getElementById('endPoint');
+            
+            // 清空现有选项（保留第一个默认选项）
+            while (startSelect.options.length > 1) startSelect.remove(1);
+            while (endSelect.options.length > 1) endSelect.remove(1);
+            
+            // 添加所有点作为选项
+            points.forEach(point => {
+                const option = document.createElement('option');
+                option.value = `${point.lng},${point.lat}`;
+                option.text = point.title;
+                
+                startSelect.add(option.cloneNode(true));
+                endSelect.add(option);
+            });
+        }
+        
+        // 7. 规划步行路线
+        function planWalkingRoute(start, end) {
+            // 先清除旧路线
+            clearRoute();
+            
+            // 解析坐标
+            const startLngLat = start.split(',');
+            const endLngLat = end.split(',');
+            
+            // 规划步行路线
+            walking.search(
+                [parseFloat(startLngLat[0]), parseFloat(startLngLat[1])], 
+                [parseFloat(endLngLat[0]), parseFloat(endLngLat[1])], 
+                function(status, result) {
+                    if (status === 'complete') {
+                        if (result.routes && result.routes.length) {
+                            drawRoute(result.routes[0], startLngLat, endLngLat);
+                        }
+                    } else {
+                        alert('步行路线规划失败，请稍后再试');
+                    }
+                }
+            );
+        }
+        
+        // 8. 绘制路线
+        function drawRoute(route, startLngLat, endLngLat) {
+            // 解析路径
+            var path = [];
+            for (var i = 0, l = route.steps.length; i < l; i++) {
+                var step = route.steps[i];
+                for (var j = 0, n = step.path.length; j < n; j++) {
+                    path.push(step.path[j]);
+                }
+            }
+            
+            // 创建起点和终点标记
+            startMarker = new AMap.Marker({
+                position: startLngLat,
+                icon: 'https://webapi.amap.com/theme/v1.3/markers/n/start.png',
+                map: map,
+                anchor: 'bottom-center',
+            });
+            
+            endMarker = new AMap.Marker({
+                position: endLngLat,
+                icon: 'https://webapi.amap.com/theme/v1.3/markers/n/end.png',
+                map: map,
+                anchor: 'bottom-center',
+            });
+            
+            // 创建路线
+            routeLine = new AMap.Polyline({
+                path: path,
+                isOutline: true,
+                outlineColor: '#ffeeee',
+                borderWeight: 2,
+                strokeWeight: 5,
+                strokeColor: '#0091ff',
+                strokeOpacity: 0.9,
+                lineJoin: 'round'
+            });
+            
+            map.add(routeLine);
+            
+            // 调整视野
+            map.setFitView([startMarker, endMarker, routeLine]);
+        }
+        
+        // 9. 清除路线
+        function clearRoute() {
+            if (routeLine) {
+                map.remove(routeLine);
+                routeLine = null;
+            }
+            if (startMarker) {
+                map.remove(startMarker);
+                startMarker = null;
+            }
+            if (endMarker) {
+                map.remove(endMarker);
+                endMarker = null;
+            }
+        }
+        
+        // 10. 初始化地图后创建标记
+        map.on('complete', function() {
+            createMarkers();
+            
+            // 绑定路线规划按钮事件
+            document.getElementById('planRoute').addEventListener('click', function() {
+                const start = document.getElementById('startPoint').value;
+                const end = document.getElementById('endPoint').value;
+                
+                if (!start || !end) {
+                    alert('请选择起点和终点');
+                    return;
+                }
+                
+                if (start === end) {
+                    alert('起点和终点不能相同');
+                    return;
+                }
+                
+                planWalkingRoute(start, end);
+            });
+            
+            // 绑定清除路线按钮事件
+            document.getElementById('clearRoute').addEventListener('click', clearRoute);
+        });
+    </script>
+</body>
+</html>
